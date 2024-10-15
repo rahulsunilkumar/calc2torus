@@ -115,8 +115,94 @@
         scene.add(torus);
 
         // Create points for (0, b) and (0, b + a)
-        function createPoint(x, y, z) {
+        function createPoint(x, y, z, label) {
             const pointGeometry = new THREE.SphereGeometry(0.2, 16, 16);
             const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
             const point = new THREE.Mesh(pointGeometry, pointMaterial);
-     
+            point.position.set(x, y, z);
+
+            const textDiv = document.createElement('div');
+            textDiv.style.position = 'absolute';
+            textDiv.style.color = '#ffffff';
+            textDiv.innerHTML = label;
+            textDiv.id = label.replace(/\s+/g, '') + 'Label';
+            document.body.appendChild(textDiv);
+
+            return { point, textDiv };
+        }
+
+        let pointB = createPoint(0, 5, 0, '(0, b)');
+        let pointBA = createPoint(0, 7, 0, '(0, b + a)');
+        scene.add(pointB.point);
+        scene.add(pointBA.point);
+
+        // Function to update point labels
+        function updatePointLabel(textDiv, point) {
+            const vector = point.position.clone();
+            vector.project(camera);
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = -(vector.y * 0.5 - 0.5) * window.innerHeight;
+            textDiv.style.transform = `translate(-50%, -50%) translate(${x}px,${y}px)`;
+        }
+
+        // Function to calculate the surface area of a torus
+        function calculateSurfaceArea(a, b) {
+            return 4 * Math.PI * Math.PI * a * b;
+        }
+
+        // Update surface area value
+        function updateSurfaceArea(a, b) {
+            const surfaceArea = calculateSurfaceArea(a, b);
+            document.getElementById('surfaceAreaValue').innerText = surfaceArea.toFixed(2);
+        }
+
+        // Initial calculation of surface area
+        updateSurfaceArea(2, 5);
+
+        // Update torus, points, and surface area when sliders are changed
+        function updateVisualization() {
+            const minorRadius = parseFloat(document.getElementById('minorRadius').value);
+            const majorRadius = parseFloat(document.getElementById('majorRadius').value);
+
+            document.getElementById('minorValue').innerText = minorRadius;
+            document.getElementById('majorValue').innerText = majorRadius;
+
+            // Remove old torus
+            scene.remove(torus);
+            torus.geometry.dispose();
+
+            // Create new torus with updated radii
+            torus = createTorus(minorRadius, majorRadius);
+            scene.add(torus);
+
+            // Update points at (0, b) and (0, b + a)
+            pointB.point.position.set(0, majorRadius, 0);
+            pointBA.point.position.set(0, majorRadius + minorRadius, 0);
+
+
+            // Update surface area value
+            updateSurfaceArea(minorRadius, majorRadius);
+        }
+
+        document.getElementById('minorRadius').addEventListener('input', updateVisualization);
+        document.getElementById('majorRadius').addEventListener('input', updateVisualization);
+
+        // Animate the scene
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+
+        }
+
+        animate();
+
+        // Resize listener to maintain aspect ratio
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight * 0.7);
+        });
+    </script>
+</body>
+</html>
